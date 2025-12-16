@@ -1,17 +1,10 @@
-# Test files and coverage reports (not needed in production)
-__tests__/
+# Coverage reports (not needed in production)
 coverage/
-*.test.ts
-*.test.tsx
-*.spec.ts
-*.spec.tsx
 
 # Development files
 .env.local
 .env.development
 .env.test
 
-# Test output
-jest.config.js
-jest.setup.js
+# Note: __tests__/ and jest config files are needed for prebuild tests
 
