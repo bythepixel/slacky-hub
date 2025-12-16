@@ -23,6 +23,7 @@ export default function SlackChannels() {
     const [loading, setLoading] = useState(true)
     const [editingId, setEditingId] = useState<number | null>(null)
     const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; channelId: number | null }>({ show: false, channelId: null })
+    const [syncing, setSyncing] = useState(false)
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -120,6 +121,37 @@ export default function SlackChannels() {
         setDeleteConfirm({ show: false, channelId: null })
     }
 
+    const handleSync = async () => {
+        setSyncing(true)
+        try {
+            const res = await fetch('/api/slack-channels/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+            const data = await res.json()
+            if (res.ok) {
+                const errorCount = data.results.errors?.length || 0
+                let message = `Sync completed!\nCreated: ${data.results.created}\nUpdated: ${data.results.updated}`
+                if (errorCount > 0) {
+                    message += `\n\nErrors: ${errorCount}`
+                    if (errorCount <= 10) {
+                        message += '\n\n' + data.results.errors.join('\n')
+                    } else {
+                        message += `\n\nFirst 10 errors:\n${data.results.errors.slice(0, 10).join('\n')}\n\n... and ${errorCount - 10} more`
+                    }
+                }
+                alert(message)
+                await fetchChannels()
+            } else {
+                alert(data.error || 'Failed to sync channels')
+            }
+        } catch (error: any) {
+            alert('An error occurred: ' + (error.message || 'Unknown error'))
+        } finally {
+            setSyncing(false)
+        }
+    }
+
     if (status === "loading" || !session) return <div>Loading...</div>
 
     return (
@@ -128,8 +160,9 @@ export default function SlackChannels() {
                 <title>Slack Channels - Slacky Hub</title>
             </Head>
 
-            <div className="max-w-6xl mx-auto space-y-8">
-                <Header />
+            <Header />
+
+            <div className="max-w-7xl mx-auto space-y-8">
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Form */}
@@ -197,7 +230,9 @@ export default function SlackChannels() {
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-bold text-lg text-slate-100">{c.name || 'Unnamed Channel'}</p>
+                                                <p className="font-bold text-lg text-slate-100">
+                                                    {c.name ? (c.name.startsWith('#') ? c.name : `#${c.name}`) : 'Unnamed Channel'}
+                                                </p>
                                             </div>
                                             <p className="text-slate-500 text-xs font-mono mb-2">{c.channelId}</p>
                                             {c._count && c._count.mappings > 0 && (
@@ -271,6 +306,33 @@ export default function SlackChannels() {
                     </div>
                 </div>
             )}
+
+            {/* Sync Button - Fixed Position */}
+            <button
+                onClick={handleSync}
+                disabled={syncing}
+                className={`fixed bottom-6 right-6 px-6 py-3 rounded-full font-bold text-white transition-all shadow-2xl hover:shadow-3xl active:scale-95 text-sm z-50 ${syncing ? 'bg-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'}`}
+                title="Sync all channels from Slack"
+            >
+                {syncing ? (
+                    <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Syncing...
+                    </span>
+                ) : (
+                    <span className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        Sync from Slack
+                    </span>
+                )}
+            </button>
         </div>
     )
 }

@@ -1,10 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../lib/prisma'
-import { fetchRecentMessages } from '../../lib/services/slackService'
-import { createCompanyNote } from '../../lib/services/hubspotService'
-import { generateSummary, generateFallbackSummary } from '../../lib/services/openaiService'
-import { getUserMap, formatMessagesForSummary } from '../../lib/services/userMappingService'
+import { getUserMap } from '../../lib/services/userMappingService'
 import { getCadencesForToday } from '../../lib/services/cadenceService'
+import { 
+    createCronLog, 
+    updateCronLogMappingsFound, 
+    updateCronLogCompleted,
+    finalizeCronLog,
+    updateCronLogFailed,
+    createErrorCronLog
+} from '../../lib/services/cronLogService'
+import { fetchMappingsForSync } from '../../lib/services/mappingService'
+import { processMapping } from '../../lib/services/mappingSyncService'
 
 // Force dynamic execution to prevent caching issues with Vercel cron jobs
 export const dynamic = 'force-dynamic'
@@ -52,40 +59,18 @@ export default async function handler(
             cadenceResult = getCadencesForToday()
             
             // Create cron log entry
-            try {
-                const cronLog = await prisma.cronLog.create({
-                    data: {
-                        status: 'running',
-                        cadences: cadenceResult.cadences || [],
-                        dayOfWeek: cadenceResult.dayOfWeek,
-                        dayOfMonth: cadenceResult.dayOfMonth,
-                        lastDayOfMonth: cadenceResult.lastDayOfMonth,
-                        mappingsFound: 0,
-                        mappingsExecuted: 0,
-                        mappingsFailed: 0,
-                    }
-                })
-                cronLogId = cronLog.id
-                console.log(`[CRON LOG] Created cron log entry with ID: ${cronLogId}`)
-            } catch (logError: any) {
-                console.error('[CRON LOG] Failed to create cron log entry:', logError)
-                // Continue execution even if log creation fails
-            }
+            cronLogId = await createCronLog(cadenceResult)
             
             if (!cadenceResult.shouldSync) {
                 console.log(`[CRON] No mappings should sync today (Day: ${cadenceResult.dayOfWeek}, Date: ${cadenceResult.dayOfMonth}/${cadenceResult.lastDayOfMonth})`)
                 
                 // Update cron log if it was created
                 if (cronLogId) {
-                    await prisma.cronLog.update({
-                        where: { id: cronLogId },
-                        data: {
-                            status: 'completed',
-                            completedAt: new Date(),
-                        }
-                    }).catch((updateError: any) => {
+                    try {
+                        await updateCronLogCompleted(cronLogId)
+                    } catch (updateError: any) {
                         console.error('[CRON LOG] Failed to update cron log:', updateError)
-                    })
+                    }
                 }
                 
                 return res.status(200).json({ 
@@ -100,35 +85,13 @@ export default async function handler(
             }
         }
         
-        // Build where clause
-        let whereClause: any = mappingId ? { id: Number(mappingId) } : {}
-        
-        // If this is a cron call, filter by cadence based on current date
-        if (isCronCall && cadenceResult) {
-            whereClause.cadence = { in: cadenceResult.cadences }
-            console.log(`[CRON] Filtering mappings by cadence: ${cadenceResult.cadences.join(', ')} (Day: ${cadenceResult.dayOfWeek}, Date: ${cadenceResult.dayOfMonth}/${cadenceResult.lastDayOfMonth})`)
-        }
-        
-        const mappings = await prisma.mapping.findMany({ 
-            where: whereClause,
-            include: {
-                slackChannels: {
-                    include: {
-                        slackChannel: true
-                    }
-                },
-                hubspotCompany: true
-            }
-        })
+        // Fetch mappings for sync
+        const mappings = await fetchMappingsForSync(mappingId ? Number(mappingId) : undefined, cadenceResult)
         
         // Update cron log with mappings found
         if (isCronCall && cronLogId) {
             try {
-                await prisma.cronLog.update({
-                    where: { id: cronLogId },
-                    data: { mappingsFound: mappings.length }
-                })
-                console.log(`[CRON] Found ${mappings.length} mapping(s) to sync`)
+                await updateCronLogMappingsFound(cronLogId, mappings.length)
             } catch (updateError: any) {
                 console.error('[CRON LOG] Failed to update mappings found:', updateError)
             }
@@ -147,145 +110,42 @@ export default async function handler(
         // Fetch user map once for all mappings
         const userMap = await getUserMap()
 
-        for (const mapping of mappings) {
-            let mappingSuccess = false
-            let mappingError: string | undefined = undefined
+        // Process each mapping
+        for (let i = 0; i < mappings.length; i++) {
+            const mapping = mappings[i]
             
-            // Process each channel in the mapping
-            for (const mappingChannel of mapping.slackChannels) {
-                try {
-                    // 1. Fetch Slack Messages (Last 24 hours)
-                    const history = await fetchRecentMessages(
-                        mappingChannel.slackChannel.channelId,
-                        1
-                    )
-
-                    if (!history.messages || history.messages.length === 0) {
-                        results.push({ 
-                            id: mapping.id, 
-                            channelId: mappingChannel.slackChannel.channelId,
-                            status: isTestMode ? 'No messages to test' : 'No messages to sync' 
-                        })
-                        continue
-                    }
-
-                    // 2. Format messages with user names
-                    const messagesText = formatMessagesForSummary(history.messages, userMap)
-
-                    // 3. Generate Summary using ChatGPT
-                    let summaryContent: string
-                    try {
-                        summaryContent = await generateSummary(
-                            messagesText,
-                            systemPrompt,
-                            mappingChannel.slackChannel.name || mappingChannel.slackChannel.channelId
-                        )
-                    } catch (openaiErr: any) {
-                        // Fallback to simple list if OpenAI fails
-                        summaryContent = generateFallbackSummary(
-                            history.messages,
-                            openaiErr.message || 'Unknown error'
-                        )
-                    }
-
-                    // 4. Create Note in HubSpot (skip if test mode)
-                    if (!isTestMode) {
-                        await createCompanyNote(
-                            mapping.hubspotCompany.companyId,
-                            summaryContent
-                        )
-
-                        // Update last synced timestamp
-                        await prisma.mapping.update({
-                            where: { id: mapping.id },
-                            data: { lastSyncedAt: new Date() }
-                        })
-                    }
-
-                    results.push({
-                        id: mapping.id,
-                        channelId: mappingChannel.slackChannel.channelId,
-                        status: isTestMode ? 'Test Complete' : 'Synced',
-                        summary: summaryContent,
-                        destination: {
-                            name: mapping.hubspotCompany.name,
-                            id: mapping.hubspotCompany.companyId
-                        }
-                    })
-                    
-                    // Mark mapping as successful if at least one channel succeeded
-                    mappingSuccess = true
-
-                } catch (error: any) {
-                    const errorMsg = error.message || 'Unknown error'
-                    console.error(`[SYNC ERROR] ${isTestMode ? 'Testing' : 'Syncing'} mapping ${mapping.id} channel ${mappingChannel.slackChannel.channelId}:`, errorMsg)
-                    console.error(`[SYNC ERROR] Full error details:`, error)
-                    results.push({ 
-                        id: mapping.id, 
-                        channelId: mappingChannel.slackChannel.channelId,
-                        status: 'Failed', 
-                        error: errorMsg
-                    })
-                    
-                    // Track error for this mapping
-                    if (!mappingError) {
-                        mappingError = errorMsg
-                    }
-                }
-            }
+            // Process the mapping
+            const syncResult = await processMapping(
+                mapping,
+                systemPrompt,
+                userMap,
+                isTestMode
+            )
+            
+            // Add results to the overall results array
+            results.push(...syncResult.results)
             
             // Track mapping status for cron log
             if (isCronCall && cronLogId) {
                 mappingStatuses.set(mapping.id, {
-                    success: mappingSuccess,
-                    error: mappingError
+                    success: syncResult.success,
+                    error: syncResult.error
                 })
+            }
+            
+            // Delay 2 seconds between mappings (except after the last one)
+            if (i < mappings.length - 1) {
+                console.log(`[SYNC] Waiting 2 seconds before processing next mapping...`)
+                await new Promise(resolve => setTimeout(resolve, 2000))
             }
         }
 
         // Update cron log with execution results
         if (isCronCall && cronLogId) {
-            let mappingsExecuted = 0
-            let mappingsFailed = 0
-            
-            // Create cron log mapping entries and count successes/failures
-            const mappingEntries = Array.from(mappingStatuses.entries())
-            for (const [mappingId, status] of mappingEntries) {
-                try {
-                    await prisma.cronLogMapping.create({
-                        data: {
-                            cronLogId: cronLogId,
-                            mappingId: mappingId,
-                            status: status.success ? 'success' : 'failed',
-                            errorMessage: status.error || null,
-                        }
-                    })
-                    
-                    if (status.success) {
-                        mappingsExecuted++
-                    } else {
-                        mappingsFailed++
-                    }
-                } catch (mappingLogError: any) {
-                    console.error(`[CRON LOG] Failed to create mapping log entry for mapping ${mappingId}:`, mappingLogError)
-                    // Continue processing other mappings
-                }
-            }
-            
-            // Update cron log with final status
             try {
-                await prisma.cronLog.update({
-                    where: { id: cronLogId },
-                    data: {
-                        status: 'completed',
-                        completedAt: new Date(),
-                        mappingsExecuted: mappingsExecuted,
-                        mappingsFailed: mappingsFailed,
-                    }
-                })
-                console.log(`[CRON LOG] Updated cron log ${cronLogId} with final status`)
-            } catch (updateError: any) {
-                console.error('[CRON LOG] Failed to update cron log with final status:', updateError)
+                await finalizeCronLog(cronLogId, mappingStatuses)
+            } catch (error: any) {
+                console.error('[CRON LOG] Failed to finalize cron log:', error)
             }
         }
 
@@ -305,37 +165,13 @@ export default async function handler(
         if (isCronCall) {
             if (cronLogId) {
                 try {
-                    await prisma.cronLog.update({
-                        where: { id: cronLogId },
-                        data: {
-                            status: 'failed',
-                            completedAt: new Date(),
-                            errorMessage: error.message || 'Internal Server Error',
-                        }
-                    })
-                    console.log(`[CRON LOG] Updated cron log ${cronLogId} with error status`)
+                    await updateCronLogFailed(cronLogId, error.message || 'Internal Server Error')
                 } catch (updateError: any) {
                     console.error('[CRON LOG] Failed to update cron log with error:', updateError)
                 }
             } else {
                 // Try to create a cron log entry even if we're in error state
-                console.log('[CRON LOG] Attempting to create cron log entry for failed sync...')
-                try {
-                    const errorLog = await prisma.cronLog.create({
-                        data: {
-                            status: 'failed',
-                            completedAt: new Date(),
-                            errorMessage: error.message || 'Internal Server Error',
-                            cadences: [],
-                            mappingsFound: 0,
-                            mappingsExecuted: 0,
-                            mappingsFailed: 0,
-                        }
-                    })
-                    console.log(`[CRON LOG] Created error log entry with ID: ${errorLog.id}`)
-                } catch (createError: any) {
-                    console.error('[CRON LOG] CRITICAL: Failed to create error log entry:', createError)
-                }
+                await createErrorCronLog(error.message || 'Internal Server Error')
             }
         }
         

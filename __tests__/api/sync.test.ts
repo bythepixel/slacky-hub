@@ -409,7 +409,7 @@ describe('/api/sync', () => {
       expect(mockGenerateSummary).toHaveBeenCalledWith(
         mockMessagesText,
         'Custom prompt',
-        'test-channel'
+        '#test-channel'
       )
     })
   })

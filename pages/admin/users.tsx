@@ -155,8 +155,9 @@ export default function Users() {
                 <title>User Management - Slacky Hub</title>
             </Head>
 
-            <div className="max-w-5xl mx-auto space-y-8">
-                <Header />
+            <Header />
+
+            <div className="max-w-7xl mx-auto space-y-8">
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* Form */}

@@ -292,7 +292,7 @@ export default function CronLogs() {
                                                                                     <span className="font-semibold">Channels:</span>{' '}
                                                                                     {mapping.mapping.slackChannels.map((sc, idx) => (
                                                                                         <span key={idx}>
-                                                                                            {sc.slackChannel.name || sc.slackChannel.channelId}
+                                                                                            {sc.slackChannel.name ? (sc.slackChannel.name.startsWith('#') ? sc.slackChannel.name : `#${sc.slackChannel.name}`) : sc.slackChannel.channelId}
                                                                                             {idx < mapping.mapping.slackChannels.length - 1 && ', '}
                                                                                         </span>
                                                                                     ))}

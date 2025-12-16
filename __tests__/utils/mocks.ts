@@ -78,6 +78,7 @@ export const mockSlackClient = {
   conversations: {
     history: jest.fn(),
     join: jest.fn(),
+    list: jest.fn(),
   },
   users: {
     list: jest.fn(),
@@ -88,8 +89,10 @@ export const mockSlackClient = {
 export function resetMocks() {
   mockSlackClient.conversations.history.mockReset()
   mockSlackClient.conversations.join.mockReset()
+  mockSlackClient.conversations.list.mockReset()
   mockSlackClient.users.list.mockReset()
   mockHubSpotClient.crm.objects.notes.basicApi.create.mockReset()
+  mockHubSpotClient.crm.companies.basicApi.getPage.mockReset()
   mockOpenAIClient.createChatCompletion.mockReset()
 }
 
@@ -101,6 +104,11 @@ export const mockHubSpotClient = {
         basicApi: {
           create: jest.fn(),
         },
+      },
+    },
+    companies: {
+      basicApi: {
+        getPage: jest.fn(),
       },
     },
   },

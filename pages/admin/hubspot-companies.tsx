@@ -23,6 +23,7 @@ export default function HubspotCompanies() {
     const [loading, setLoading] = useState(true)
     const [editingId, setEditingId] = useState<number | null>(null)
     const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; companyId: number | null }>({ show: false, companyId: null })
+    const [syncing, setSyncing] = useState(false)
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -120,6 +121,37 @@ export default function HubspotCompanies() {
         setDeleteConfirm({ show: false, companyId: null })
     }
 
+    const handleSync = async () => {
+        setSyncing(true)
+        try {
+            const res = await fetch('/api/hubspot-companies/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            })
+            const data = await res.json()
+            if (res.ok) {
+                const errorCount = data.results.errors?.length || 0
+                let message = `Sync completed!\nCreated: ${data.results.created}\nUpdated: ${data.results.updated}`
+                if (errorCount > 0) {
+                    message += `\n\nErrors: ${errorCount}`
+                    if (errorCount <= 10) {
+                        message += '\n\n' + data.results.errors.join('\n')
+                    } else {
+                        message += `\n\nFirst 10 errors:\n${data.results.errors.slice(0, 10).join('\n')}\n\n... and ${errorCount - 10} more`
+                    }
+                }
+                alert(message)
+                await fetchCompanies()
+            } else {
+                alert(data.error || 'Failed to sync companies')
+            }
+        } catch (error: any) {
+            alert('An error occurred: ' + (error.message || 'Unknown error'))
+        } finally {
+            setSyncing(false)
+        }
+    }
+
     if (status === "loading" || !session) return <div>Loading...</div>
 
     return (
@@ -128,8 +160,9 @@ export default function HubspotCompanies() {
                 <title>HubSpot Companies - Slacky Hub</title>
             </Head>
 
-            <div className="max-w-6xl mx-auto space-y-8">
-                <Header />
+            <Header />
+
+            <div className="max-w-7xl mx-auto space-y-8">
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Form */}
@@ -271,6 +304,34 @@ export default function HubspotCompanies() {
                     </div>
                 </div>
             )}
+
+            {/* Sync Button - Fixed Position */}
+            <button
+                onClick={handleSync}
+                disabled={syncing}
+                className={`fixed bottom-6 right-6 z-50 px-6 py-3 rounded-xl font-semibold shadow-lg transition-all active:scale-95 flex items-center gap-2 ${
+                    syncing
+                        ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
+            >
+                {syncing ? (
+                    <>
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Syncing...</span>
+                    </>
+                ) : (
+                    <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>
+                        </svg>
+                        <span>Sync from HubSpot</span>
+                    </>
+                )}
+            </button>
         </div>
     )
 }

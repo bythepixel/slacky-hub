@@ -57,6 +57,8 @@ export default function Home() {
     const [editingId, setEditingId] = useState<number | null>(null)
     const [syncingIds, setSyncingIds] = useState<number[]>([])
     const [testingIds, setTestingIds] = useState<number[]>([])
+    const [channelSearch, setChannelSearch] = useState('')
+    const [companySearch, setCompanySearch] = useState('')
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -162,6 +164,8 @@ export default function Home() {
             }
 
             setForm({ title: '', channelIds: [], companyId: '', cadence: 'daily' })
+            setChannelSearch('')
+            setCompanySearch('')
             await fetchMappings()
         } catch (error: any) {
             alert('An error occurred: ' + (error.message || 'Unknown error'))
@@ -181,6 +185,8 @@ export default function Home() {
     const handleCancelEdit = () => {
         setEditingId(null)
         setForm({ title: '', channelIds: [], companyId: '', cadence: 'daily' })
+        setChannelSearch('')
+        setCompanySearch('')
     }
 
     const handleChannelToggle = (channelId: number) => {
@@ -248,9 +254,9 @@ export default function Home() {
                 <title>Mappings - Slacky Hub</title>
             </Head>
 
-            <div className="max-w-5xl mx-auto space-y-8">
-                {/* Header */}
-                <Header />
+            <Header />
+
+            <div className="max-w-7xl mx-auto space-y-8">
 
                 {syncResult && (
                     <div className="space-y-4">
@@ -296,25 +302,46 @@ export default function Home() {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Slack Channels <span className="text-red-500">*</span></label>
-                                    <div className="max-h-48 overflow-y-auto border border-slate-600 rounded-lg bg-slate-900 p-2 space-y-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Search channels..."
+                                        value={channelSearch}
+                                        onChange={(e) => setChannelSearch(e.target.value)}
+                                        className="w-full px-4 py-2 mb-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    />
+                                    <div className="max-h-48 overflow-y-auto border border-slate-600 rounded-lg bg-slate-900 p-1 space-y-0.5">
                                         {slackChannels.length === 0 ? (
-                                            <p className="text-xs text-slate-500 p-2">No channels available. <a href="/admin/slack-channels" className="text-indigo-400 hover:underline">Create one</a></p>
-                                        ) : (
-                                            slackChannels.map(channel => (
-                                                <label key={channel.id} className="flex items-center gap-2 p-2 rounded hover:bg-slate-800 cursor-pointer">
+                                            <p className="text-xs text-slate-500 p-1.5">No channels available. <a href="/admin/slack-channels" className="text-indigo-400 hover:underline">Create one</a></p>
+                                        ) : (() => {
+                                            const filteredChannels = slackChannels.filter(channel => {
+                                                if (!channelSearch.trim()) return true
+                                                const searchLower = channelSearch.toLowerCase()
+                                                const channelName = channel.name?.toLowerCase() || ''
+                                                const channelId = channel.channelId.toLowerCase()
+                                                return channelName.includes(searchLower) || channelId.includes(searchLower)
+                                            })
+                                            
+                                            if (filteredChannels.length === 0) {
+                                                return (
+                                                    <p className="text-xs text-slate-500 p-1.5">No channels match "{channelSearch}"</p>
+                                                )
+                                            }
+                                            
+                                            return filteredChannels.map(channel => (
+                                                <label key={channel.id} className="flex items-center gap-1.5 p-1 rounded hover:bg-slate-800 cursor-pointer">
                                                     <input
                                                         type="checkbox"
                                                         checked={form.channelIds.includes(channel.id)}
                                                         onChange={() => handleChannelToggle(channel.id)}
-                                                        className="w-4 h-4 rounded bg-slate-900 border-slate-600 text-indigo-600 focus:ring-indigo-500"
+                                                        className="w-3.5 h-3.5 rounded bg-slate-900 border-slate-600 text-indigo-600 focus:ring-indigo-500"
                                                     />
-                                                    <span className="text-sm text-slate-300">
-                                                        {channel.name || channel.channelId}
-                                                        {channel.name && <span className="text-xs text-slate-500 ml-2 font-mono">({channel.channelId})</span>}
+                                                    <span className="text-xs text-slate-300">
+                                                        {channel.name ? (channel.name.startsWith('#') ? channel.name : `#${channel.name}`) : channel.channelId}
+                                                        {channel.name && <span className="text-xs text-slate-500 ml-1.5 font-mono">({channel.channelId})</span>}
                                                     </span>
                                                 </label>
                                             ))
-                                        )}
+                                        })()}
                                     </div>
                                     {form.channelIds.length > 0 && (
                                         <p className="text-xs text-indigo-400 mt-1">{form.channelIds.length} channel{form.channelIds.length !== 1 ? 's' : ''} selected</p>
@@ -322,22 +349,55 @@ export default function Home() {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">HubSpot Company <span className="text-red-500">*</span></label>
-                                    <select
-                                        required
-                                        className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
-                                        value={form.companyId}
-                                        onChange={e => setForm({ ...form, companyId: e.target.value })}
-                                    >
-                                        <option value="">Select a company...</option>
-                                        {hubspotCompanies.map(company => (
-                                            <option key={company.id} value={company.id}>
-                                                {company.name || company.companyId}
-                                                {company.name && ` (${company.companyId})`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {hubspotCompanies.length === 0 && (
-                                        <p className="text-xs text-slate-500 mt-1">No companies available. <a href="/admin/hubspot-companies" className="text-indigo-400 hover:underline">Create one</a></p>
+                                    <input
+                                        type="text"
+                                        placeholder="Search companies..."
+                                        value={companySearch}
+                                        onChange={(e) => setCompanySearch(e.target.value)}
+                                        className="w-full px-4 py-2 mb-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                    />
+                                    <div className="max-h-48 overflow-y-auto border border-slate-600 rounded-lg bg-slate-900 p-1 space-y-0.5">
+                                        {hubspotCompanies.length === 0 ? (
+                                            <p className="text-xs text-slate-500 p-1.5">No companies available. <a href="/admin/hubspot-companies" className="text-indigo-400 hover:underline">Create one</a></p>
+                                        ) : (() => {
+                                            const filteredCompanies = hubspotCompanies.filter(company => {
+                                                if (!companySearch.trim()) return true
+                                                const searchLower = companySearch.toLowerCase()
+                                                const companyName = company.name?.toLowerCase() || ''
+                                                const companyId = company.companyId.toLowerCase()
+                                                return companyName.includes(searchLower) || companyId.includes(searchLower)
+                                            })
+                                            
+                                            if (filteredCompanies.length === 0) {
+                                                return (
+                                                    <p className="text-xs text-slate-500 p-1.5">No companies match "{companySearch}"</p>
+                                                )
+                                            }
+                                            
+                                            return filteredCompanies.map(company => (
+                                                <label key={company.id} className="flex items-center gap-1.5 p-1 rounded hover:bg-slate-800 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="companyId"
+                                                        checked={form.companyId === company.id.toString()}
+                                                        onChange={() => setForm({ ...form, companyId: company.id.toString() })}
+                                                        className="w-3.5 h-3.5 rounded bg-slate-900 border-slate-600 text-indigo-600 focus:ring-indigo-500"
+                                                    />
+                                                    <span className="text-xs text-slate-300">
+                                                        {company.name || company.companyId}
+                                                        {company.name && <span className="text-xs text-slate-500 ml-1.5 font-mono">({company.companyId})</span>}
+                                                    </span>
+                                                </label>
+                                            ))
+                                        })()}
+                                    </div>
+                                    {form.companyId && (
+                                        <p className="text-xs text-indigo-400 mt-1">
+                                            {(() => {
+                                                const selected = hubspotCompanies.find(c => c.id.toString() === form.companyId)
+                                                return selected ? `Selected: ${selected.name || selected.companyId}` : 'Company selected'
+                                            })()}
+                                        </p>
                                     )}
                                 </div>
                                 <div>
@@ -395,7 +455,7 @@ export default function Home() {
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 {m.slackChannels.map((msc, idx) => (
                                                     <span key={msc.id} className="font-bold text-lg text-slate-100">
-                                                        {msc.slackChannel.name || msc.slackChannel.channelId}
+                                                        {msc.slackChannel.name ? (msc.slackChannel.name.startsWith('#') ? msc.slackChannel.name : `#${msc.slackChannel.name}`) : msc.slackChannel.channelId}
                                                         {idx < m.slackChannels.length - 1 && <span className="text-slate-500 mx-1">+</span>}
                                                     </span>
                                                 ))}
