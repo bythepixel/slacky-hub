@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Header from '../components/Header'
 import { useState, useEffect } from 'react'
 
 type Mapping = {
@@ -21,7 +22,14 @@ type SyncResultDetail = {
     error?: string
 }
 
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/router"
+
+// ... types ...
+
 export default function Home() {
+    const { data: session, status } = useSession()
+    const router = useRouter()
     const [mappings, setMappings] = useState<Mapping[]>([])
     const [loading, setLoading] = useState(true)
     const [form, setForm] = useState({ slackChannelId: '', hubspotCompanyId: '', slackChannelName: '', hubspotCompanyName: '' })
@@ -31,8 +39,20 @@ export default function Home() {
     const [syncingIds, setSyncingIds] = useState<number[]>([])
 
     useEffect(() => {
-        fetchMappings()
-    }, [])
+        if (status === "unauthenticated") {
+            router.push("/auth/signin")
+        } else if (status === "authenticated") {
+            fetchMappings()
+        }
+    }, [status])
+
+    if (status === "loading") {
+        return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>
+    }
+
+    if (!session) {
+        return null // Will redirect
+    }
 
     const fetchMappings = async () => {
         const res = await fetch('/api/mappings')
@@ -124,22 +144,18 @@ export default function Home() {
 
             <div className="max-w-5xl mx-auto space-y-8">
                 {/* Header */}
-                <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                    <div>
-                        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
-                            Slacky Hub
-                        </h1>
-                        <p className="text-slate-500 mt-2">Slack AI Summaries ↔ HubSpot Notes Integration</p>
-                    </div>
-                    <button
-                        onClick={handleSync}
-                        disabled={syncing}
-                        className={`px-6 py-3 rounded-full font-bold text-white transition-all shadow-lg hover:shadow-xl active:scale-95 ${syncing ? 'bg-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
-                            }`}
-                    >
-                        {syncing ? 'Syncing...' : 'Trigger Sync Now'}
-                    </button>
-                </div>
+                <Header
+                    action={
+                        <button
+                            onClick={handleSync}
+                            disabled={syncing}
+                            className={`px-6 py-2 rounded-full font-bold text-white transition-all shadow-lg hover:shadow-xl active:scale-95 text-sm ${syncing ? 'bg-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
+                                }`}
+                        >
+                            {syncing ? 'Syncing...' : 'Trigger Sync Now'}
+                        </button>
+                    }
+                />
 
                 {syncResult && (
                     <div className="space-y-4">
