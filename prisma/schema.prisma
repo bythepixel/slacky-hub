@@ -14,12 +14,12 @@ enum Cadence {
 }
 
 model SlackChannel {
-  id        Int                  @id @default(autoincrement())
-  channelId String               @unique
+  id        Int                   @id @default(autoincrement())
+  channelId String                @unique
   name      String?
   mappings  MappingSlackChannel[]
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 }
 
 model HubspotCompany {
@@ -32,26 +32,27 @@ model HubspotCompany {
 }
 
 model Mapping {
-  id                Int                  @id @default(autoincrement())
-  title             String?
-  hubspotCompanyId  Int
-  hubspotCompany    HubspotCompany      @relation(fields: [hubspotCompanyId], references: [id], onDelete: Cascade)
-  slackChannels     MappingSlackChannel[]
-  cadence           Cadence             @default(daily)
-  lastSyncedAt      DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  id               Int                   @id @default(autoincrement())
+  title            String?
+  hubspotCompanyId Int
+  hubspotCompany   HubspotCompany        @relation(fields: [hubspotCompanyId], references: [id], onDelete: Cascade)
+  slackChannels    MappingSlackChannel[]
+  cadence          Cadence               @default(daily)
+  lastSyncedAt     DateTime?
+  cronLogMappings  CronLogMapping[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@index([hubspotCompanyId])
 }
 
 model MappingSlackChannel {
-  id            Int          @id @default(autoincrement())
-  mappingId     Int
+  id             Int          @id @default(autoincrement())
+  mappingId      Int
   slackChannelId Int
-  mapping       Mapping      @relation(fields: [mappingId], references: [id], onDelete: Cascade)
-  slackChannel  SlackChannel @relation(fields: [slackChannelId], references: [id], onDelete: Cascade)
-  createdAt     DateTime     @default(now())
+  mapping        Mapping      @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+  slackChannel   SlackChannel @relation(fields: [slackChannelId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
 
   @@unique([mappingId, slackChannelId])
   @@index([mappingId])
@@ -77,4 +78,40 @@ model Prompt {
   isActive  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CronLog {
+  id               Int              @id @default(autoincrement())
+  startedAt        DateTime         @default(now())
+  completedAt      DateTime?
+  status           String // 'running', 'completed', 'failed'
+  cadences         String[] // Array of cadences that were active
+  dayOfWeek        Int? // Day of week (0-6)
+  dayOfMonth       Int? // Day of month
+  lastDayOfMonth   Int? // Last day of the month
+  mappingsFound    Int              @default(0) // Number of mappings found
+  mappingsExecuted Int              @default(0) // Number of mappings successfully executed
+  mappingsFailed   Int              @default(0) // Number of mappings that failed
+  errorMessage     String? // Error message if the cron run failed
+  mappings         CronLogMapping[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([startedAt])
+  @@index([status])
+}
+
+model CronLogMapping {
+  id           Int      @id @default(autoincrement())
+  cronLogId    Int
+  cronLog      CronLog  @relation(fields: [cronLogId], references: [id], onDelete: Cascade)
+  mappingId    Int
+  mapping      Mapping  @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+  status       String // 'success', 'failed', 'skipped'
+  errorMessage String? // Error message if failed
+  createdAt    DateTime @default(now())
+
+  @@unique([cronLogId, mappingId])
+  @@index([cronLogId])
+  @@index([mappingId])
 }

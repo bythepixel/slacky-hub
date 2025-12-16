@@ -54,6 +54,7 @@ describe('Header component', () => {
     expect(screen.getByText('Channels')).toBeInTheDocument()
     expect(screen.getByText('Companies')).toBeInTheDocument()
     expect(screen.getByText('Users')).toBeInTheDocument()
+    expect(screen.getByText('Cron Logs')).toBeInTheDocument()
   })
 
   it('should show user initial in circle', () => {
@@ -93,6 +94,14 @@ describe('Header component', () => {
     
     const promptsLink = screen.getByText('Prompts').closest('a')
     expect(promptsLink).toHaveClass('bg-slate-600')
+  })
+
+  it('should highlight Cron Logs when active', () => {
+    mockRouter.pathname = '/admin/cron-logs'
+    render(<Header />)
+    
+    const cronLogsLink = screen.getByText('Cron Logs').closest('a')
+    expect(cronLogsLink).toHaveClass('bg-slate-600')
   })
 })
 

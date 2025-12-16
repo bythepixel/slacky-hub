@@ -90,6 +90,14 @@ export default function Header({ action }: HeaderProps) {
                             Users
                         </a>
                     </Link>
+                    <Link href="/admin/cron-logs">
+                        <a className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${isActive('/admin/cron-logs')
+                            ? 'bg-slate-600 text-indigo-400 shadow-sm'
+                            : 'text-slate-300 hover:text-slate-100 hover:bg-slate-600/50'
+                            }`}>
+                            Cron Logs
+                        </a>
+                    </Link>
                 </nav>
             </div>
 

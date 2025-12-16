@@ -29,6 +29,14 @@ describe('/api/sync', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     process.env.CRON_SECRET = 'test-secret'
+    // Mock cron log operations
+    mockPrisma.cronLog = {
+      create: jest.fn(),
+      update: jest.fn(),
+    } as any
+    mockPrisma.cronLogMapping = {
+      create: jest.fn(),
+    } as any
   })
 
   afterEach(async () => {
@@ -407,6 +415,18 @@ describe('/api/sync', () => {
   })
 
   describe('GET requests (Cron)', () => {
+    beforeEach(() => {
+      // Mock cron log creation for cron calls
+      mockPrisma.cronLog.create.mockResolvedValue({
+        id: 1,
+        status: 'running',
+        mappingsFound: 0,
+        mappingsExecuted: 0,
+        mappingsFailed: 0,
+      } as any)
+      mockPrisma.cronLog.update.mockResolvedValue({} as any)
+    })
+
     it('should require CRON_SECRET authorization', async () => {
       process.env.CRON_SECRET = 'test-secret'
 
@@ -449,15 +469,24 @@ describe('/api/sync', () => {
         lastDayOfMonth: 31,
       })
 
+      mockPrisma.cronLog.create.mockResolvedValue({
+        id: 1,
+        status: 'running',
+        mappingsFound: 0,
+        mappingsExecuted: 0,
+        mappingsFailed: 0,
+      } as any)
       mockPrisma.mapping.findMany.mockResolvedValue([])
       mockPrisma.prompt.findFirst.mockResolvedValue(null)
       mockGetUserMap.mockResolvedValue(new Map())
+      mockPrisma.cronLog.update.mockResolvedValue({} as any)
 
       const req = createMockRequest('GET', {}, {}, { authorization: 'Bearer test-secret' })
       const res = createMockResponse()
 
       await handler(req as any, res)
 
+      expect(mockPrisma.cronLog.create).toHaveBeenCalled()
       expect(mockPrisma.mapping.findMany).toHaveBeenCalledWith({
         where: { cadence: { in: ['daily'] } },
         include: expect.any(Object),
@@ -475,11 +504,21 @@ describe('/api/sync', () => {
         lastDayOfMonth: 31,
       })
 
+      mockPrisma.cronLog.create.mockResolvedValue({
+        id: 1,
+        status: 'running',
+        mappingsFound: 0,
+        mappingsExecuted: 0,
+        mappingsFailed: 0,
+      } as any)
+      mockPrisma.cronLog.update.mockResolvedValue({} as any)
+
       const req = createMockRequest('GET', {}, {}, { authorization: 'Bearer test-secret' })
       const res = createMockResponse()
 
       await handler(req as any, res)
 
+      expect(mockPrisma.cronLog.create).toHaveBeenCalled()
       expect(res.status).toHaveBeenCalledWith(200)
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -488,6 +527,14 @@ describe('/api/sync', () => {
         })
       )
       expect(mockPrisma.mapping.findMany).not.toHaveBeenCalled()
+      expect(mockPrisma.cronLog.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 1 },
+          data: expect.objectContaining({
+            status: 'completed',
+          }),
+        })
+      )
     })
   })
 
