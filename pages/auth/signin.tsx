@@ -50,7 +50,7 @@ export default function SignIn() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email <span className="text-red-500">*</span></label>
                         <input
                             type="email"
                             required
@@ -60,7 +60,7 @@ export default function SignIn() {
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Password</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Password <span className="text-red-500">*</span></label>
                         <input
                             type="password"
                             required

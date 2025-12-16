@@ -105,7 +105,7 @@ export default function Users() {
                 <title>User Management - Slacky Hub</title>
             </Head>
 
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-5xl mx-auto space-y-8">
                 <Header
                     action={
                         <div className="text-xl font-bold text-slate-100">User Management</div>
@@ -115,31 +115,31 @@ export default function Users() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* Form */}
                     <div className="md:col-span-1">
-                        <div className="bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-700">
+                        <div className="bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-700 sticky top-8">
                             <h2 className="text-xl font-bold text-slate-100 mb-6 flex items-center gap-2">
                                 <span>{editingId ? '✏️' : '➕'}</span> {editingId ? 'Edit User' : 'Add User'}
                             </h2>
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">First Name</label>
-                                    <input type="text" required className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} />
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">First Name <span className="text-red-500">*</span></label>
+                                    <input type="text" required className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Last Name</label>
-                                    <input type="text" required className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} />
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Last Name <span className="text-red-500">*</span></label>
+                                    <input type="text" required className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email</label>
-                                    <input type="email" required className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email <span className="text-red-500">*</span></label>
+                                    <input type="email" required className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                                        Password {editingId && <span className="text-xs normal-case text-slate-500">(leave blank to keep current)</span>}
+                                        Password {!editingId && <span className="text-red-500">*</span>} {editingId && <span className="text-xs normal-case text-slate-500">(leave blank to keep current)</span>}
                                     </label>
                                     <input
                                         type="password"
                                         required={!editingId}
-                                        className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                        className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
                                         value={form.password}
                                         onChange={e => setForm({ ...form, password: e.target.value })}
                                     />

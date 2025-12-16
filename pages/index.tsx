@@ -190,7 +190,7 @@ export default function Home() {
                             </h2>
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Slack Channel ID</label>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Slack Channel ID <span className="text-red-500">*</span></label>
                                     <input
                                         required
                                         type="text"
@@ -201,7 +201,7 @@ export default function Home() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">HubSpot Company ID</label>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">HubSpot Company ID <span className="text-red-500">*</span></label>
                                     <input
                                         required
                                         type="text"
@@ -211,8 +211,8 @@ export default function Home() {
                                         onChange={e => setForm({ ...form, hubspotCompanyId: e.target.value })}
                                     />
                                 </div>
-                                <div className="pt-2 border-t border-slate-700">
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Channel Name (Optional)</label>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Channel Name</label>
                                     <input
                                         type="text"
                                         placeholder="#general"
@@ -222,7 +222,7 @@ export default function Home() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Company Name (Optional)</label>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Company Name</label>
                                     <input
                                         type="text"
                                         placeholder="Acme Corp"
