@@ -282,9 +282,9 @@ export default function Home() {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-[30%_1fr] gap-8">
                     {/* Form */}
-                    <div className="md:col-span-1">
+                    <div>
                         <div className="bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-700 sticky top-8">
                             <h2 className="text-xl font-bold text-slate-100 mb-6 flex items-center gap-2">
                                 <span>{editingId ? '✏️' : '➕'}</span> {editingId ? 'Edit Mapping' : 'New Mapping'}
@@ -432,7 +432,7 @@ export default function Home() {
                     </div>
 
                     {/* List */}
-                    <div className="md:col-span-2 space-y-4">
+                    <div className="space-y-4">
                         <h2 className="text-xl font-bold text-slate-100 mb-4 flex items-center gap-2">
                             <span>🔗</span> Mappings
                         </h2>

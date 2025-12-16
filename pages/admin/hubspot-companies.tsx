@@ -164,7 +164,7 @@ export default function HubspotCompanies() {
 
             <div className="max-w-7xl mx-auto space-y-8">
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-[30%_1fr] gap-8">
                     {/* Form */}
                     <div>
                         <div className="bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-700 sticky top-8">
