@@ -25,6 +25,7 @@ export default function SlackChannels() {
     const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; channelId: number | null }>({ show: false, channelId: null })
     const [syncing, setSyncing] = useState(false)
     const [search, setSearch] = useState('')
+    const [formOpen, setFormOpen] = useState(false)
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -80,6 +81,7 @@ export default function SlackChannels() {
             }
 
             setForm({ channelId: '', name: '' })
+            setFormOpen(false)
             await fetchChannels()
         } catch (error: any) {
             alert('An error occurred: ' + (error.message || 'Unknown error'))
@@ -92,11 +94,13 @@ export default function SlackChannels() {
             name: channel.name || ''
         })
         setEditingId(channel.id)
+        setFormOpen(true)
     }
 
     const handleCancelEdit = () => {
         setEditingId(null)
         setForm({ channelId: '', name: '' })
+        setFormOpen(false)
     }
 
     const handleDeleteClick = (e: React.MouseEvent, id: number) => {
@@ -156,23 +160,66 @@ export default function SlackChannels() {
     if (status === "loading" || !session) return <div>Loading...</div>
 
     return (
-        <div className="min-h-screen bg-slate-900 p-8 font-sans">
+        <div className="min-h-screen bg-slate-900 font-sans">
             <Head>
                 <title>Slack Channels - Slacky Hub</title>
             </Head>
 
             <Header />
 
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
                 <div className="grid grid-cols-1 lg:grid-cols-[30%_1fr] gap-8">
                     {/* Form */}
                     <div>
-                        <div className="bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-700 sticky top-8">
-                            <h2 className="text-xl font-bold text-slate-100 mb-6 flex items-center gap-2">
-                                <span>{editingId ? '✏️' : '➕'}</span> {editingId ? 'Edit Channel' : 'Create Channel'}
+                        {/* Sync Button */}
+                        <button
+                            onClick={handleSync}
+                            disabled={syncing}
+                            className={`w-full mb-4 px-6 py-3 rounded-xl font-semibold text-white transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2 ${
+                                syncing
+                                    ? 'bg-slate-600 text-slate-300 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
+                            }`}
+                            title="Sync all channels from Slack"
+                        >
+                            {syncing ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Syncing...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                    <span>Sync from Slack</span>
+                                </>
+                            )}
+                        </button>
+                        <div className={`bg-slate-800 rounded-2xl shadow-sm border border-slate-700 sticky top-20 ${(formOpen || editingId) ? 'p-6' : 'px-6 pt-6 pb-6'}`}>
+                            <h2 
+                                className={`text-xl font-bold text-slate-100 flex items-center gap-2 ${(formOpen || editingId) ? 'mb-6' : 'mb-0'} ${!editingId ? 'cursor-pointer hover:text-indigo-400 transition-colors' : ''}`}
+                                onClick={() => !editingId && setFormOpen(!formOpen)}
+                            >
+                                {editingId ? (
+                                    <>
+                                        <span>✏️</span> Edit Channel
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="transition-transform duration-200" style={{ transform: formOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                                        + New Channel
+                                    </>
+                                )}
                             </h2>
-                            <form onSubmit={handleSubmit} className="space-y-4">
+                            {(formOpen || editingId) && (
+                                <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Channel ID <span className="text-red-500">*</span></label>
                                     <input 
@@ -209,6 +256,7 @@ export default function SlackChannels() {
                                     )}
                                 </div>
                             </form>
+                            )}
                         </div>
                     </div>
 
@@ -339,32 +387,6 @@ export default function SlackChannels() {
                 </div>
             )}
 
-            {/* Sync Button - Fixed Position */}
-            <button
-                onClick={handleSync}
-                disabled={syncing}
-                className={`fixed bottom-6 right-6 px-6 py-3 rounded-full font-bold text-white transition-all shadow-2xl hover:shadow-3xl active:scale-95 text-sm z-50 ${syncing ? 'bg-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'}`}
-                title="Sync all channels from Slack"
-            >
-                {syncing ? (
-                    <span className="flex items-center gap-2">
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Syncing...
-                    </span>
-                ) : (
-                    <span className="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="23 4 23 10 17 10"></polyline>
-                            <polyline points="1 20 1 14 7 14"></polyline>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                        </svg>
-                        Sync from Slack
-                    </span>
-                )}
-            </button>
         </div>
     )
 }

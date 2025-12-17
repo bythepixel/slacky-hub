@@ -1,12 +1,16 @@
 import handler from '../../../pages/api/slack-channels/[id]'
 import { createMockRequest, createMockResponse, createMockSession } from '../../utils/testHelpers'
 import { mockPrisma } from '../../utils/mocks'
-import { requireAuth } from '../../../lib/middleware/auth'
+import { getServerSession } from 'next-auth/next'
 import { validateMethod } from '../../../lib/utils/methodValidator'
 import { handleError } from '../../../lib/utils/errorHandler'
 
-jest.mock('../../../lib/middleware/auth', () => ({
-  requireAuth: jest.fn(),
+jest.mock('next-auth/next', () => ({
+  getServerSession: jest.fn(),
+}))
+
+jest.mock('../../../pages/api/auth/[...nextauth]', () => ({
+  authOptions: {},
 }))
 
 jest.mock('../../../lib/utils/methodValidator', () => ({
@@ -21,14 +25,14 @@ jest.mock('../../../lib/prisma', () => ({
   prisma: require('../../utils/mocks').mockPrisma,
 }))
 
-const mockRequireAuth = requireAuth as jest.MockedFunction<typeof requireAuth>
+const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 const mockValidateMethod = validateMethod as jest.MockedFunction<typeof validateMethod>
 const mockHandleError = handleError as jest.MockedFunction<typeof handleError>
 
 describe('/api/slack-channels/[id]', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockRequireAuth.mockResolvedValue(createMockSession() as any)
+    mockGetServerSession.mockResolvedValue(createMockSession() as any)
     mockValidateMethod.mockReturnValue(true)
   })
 

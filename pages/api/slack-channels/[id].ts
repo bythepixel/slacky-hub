@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
-import { requireAuth } from '../../../lib/middleware/auth'
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "../../../lib/config/auth"
 import { validateMethod } from '../../../lib/utils/methodValidator'
 import { handleError } from '../../../lib/utils/errorHandler'
 
@@ -8,8 +9,10 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
-    const session = await requireAuth(req, res)
-    if (!session) return
+    const session = await getServerSession(req, res, authOptions)
+    if (!session) {
+        return res.status(401).json({ error: "Unauthorized" })
+    }
 
     if (!validateMethod(req, res, ['DELETE', 'PUT'])) return
 

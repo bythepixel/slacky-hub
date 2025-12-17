@@ -249,14 +249,14 @@ export default function Home() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-900 p-8 font-sans">
+        <div className="min-h-screen bg-slate-900 font-sans">
             <Head>
                 <title>Mappings - Slacky Hub</title>
             </Head>
 
             <Header />
 
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
                 {syncResult && (
                     <div className="space-y-4">
@@ -285,9 +285,15 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-[30%_1fr] gap-8">
                     {/* Form */}
                     <div>
-                        <div className="bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-700 sticky top-8">
+                        <div className="bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-700 sticky top-20">
                             <h2 className="text-xl font-bold text-slate-100 mb-6 flex items-center gap-2">
-                                <span>{editingId ? '✏️' : '➕'}</span> {editingId ? 'Edit Mapping' : 'New Mapping'}
+                                {editingId ? (
+                                    <>
+                                        <span>✏️</span> Edit Mapping
+                                    </>
+                                ) : (
+                                    <>+ New Mapping</>
+                                )}
                             </h2>
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
