@@ -30,7 +30,7 @@ export default async function handler(
 
         while (hasMore) {
             try {
-                const response = await hubspot.crm.companies.basicApi.getPage(
+                const response: any = await hubspot.crm.companies.basicApi.getPage(
                     100, // limit
                     after,
                     ['name'] // properties to fetch
