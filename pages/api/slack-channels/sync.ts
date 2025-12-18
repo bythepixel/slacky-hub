@@ -25,45 +25,15 @@ export default async function handler(
         while (hasMore) {
             let slackChannelsResponse
             try {
-                slackChannelsResponse = await slack.conversations.list({
+                const listParams: any = {
                     types: 'public_channel,private_channel',
-                    exclude_archived: true,
-                    ...(cursor && { cursor })
-                })
-            } catch (slackError: any) {
-                const errorCode = slackError.data?.error || slackError.code
-                const errorMsg = slackError.data?.error || slackError.message || 'Unknown error'
-                
-                // Handle missing scope error with detailed message
-                if (errorCode === 'missing_scope' || errorMsg === 'missing_scope') {
-                    const neededScopes = Array.isArray(slackError.data?.needed) 
-                        ? slackError.data.needed 
-                        : (slackError.data?.needed ? [slackError.data.needed] : [])
-                    const providedScopes = Array.isArray(slackError.data?.provided) 
-                        ? slackError.data.provided 
-                        : (slackError.data?.provided ? [slackError.data.provided] : [])
-                    
-                    const defaultNeededScopes = ['channels:read', 'groups:read']
-                    const scopeMessage = neededScopes.length > 0 
-                        ? `Missing scopes: ${neededScopes.join(', ')}. Please add these scopes to your Slack app's OAuth & Permissions settings and reinstall the app.`
-                        : `Missing required OAuth scopes. Please add "${defaultNeededScopes.join('" and "')}" scopes to your Slack app's OAuth & Permissions settings and reinstall the app.`
-                    
-                    console.error('[Slack API] Missing scope error:', {
-                        needed: neededScopes.length > 0 ? neededScopes : defaultNeededScopes,
-                        provided: providedScopes,
-                        error: slackError.data
-                    })
-                    
-                    return res.status(400).json({ 
-                        error: scopeMessage,
-                        details: {
-                            needed: neededScopes.length > 0 ? neededScopes : defaultNeededScopes,
-                            provided: providedScopes,
-                            instructions: 'Go to https://api.slack.com/apps → Your App → OAuth & Permissions → Add Bot Token Scopes → Reinstall App'
-                        }
-                    })
+                    exclude_archived: true
                 }
-                
+                if (cursor) {
+                    listParams.cursor = cursor
+                }
+                slackChannelsResponse = await slack.conversations.list(listParams)
+            } catch (slackError: any) {
                 // If it's the first page, return error. Otherwise, log and continue with what we have
                 if (!cursor) {
                     throw slackError
@@ -158,41 +128,6 @@ export default async function handler(
         })
     } catch (error: any) {
         console.error('Error syncing channels from Slack:', error)
-        
-        // Check if it's a scope error
-        const errorCode = error.data?.error || error.code
-        const errorMsg = error.data?.error || error.message || 'Unknown error'
-        
-        if (errorCode === 'missing_scope' || errorMsg === 'missing_scope' || errorMsg.includes('missing_scope')) {
-            const neededScopes = Array.isArray(error.data?.needed) 
-                ? error.data.needed 
-                : (error.data?.needed ? [error.data.needed] : [])
-            const providedScopes = Array.isArray(error.data?.provided) 
-                ? error.data.provided 
-                : (error.data?.provided ? [error.data.provided] : [])
-            
-            // Default scopes if Slack doesn't provide them in the error
-            const defaultNeededScopes = ['channels:read', 'groups:read']
-            const scopeMessage = neededScopes.length > 0 
-                ? `Missing scopes: ${neededScopes.join(', ')}. Please add these scopes to your Slack app's OAuth & Permissions settings and reinstall the app.`
-                : `Missing required OAuth scopes. Please add "${defaultNeededScopes.join('" and "')}" scopes to your Slack app's OAuth & Permissions settings and reinstall the app.`
-            
-            console.error('[Slack API] Missing scope error:', {
-                needed: neededScopes.length > 0 ? neededScopes : defaultNeededScopes,
-                provided: providedScopes,
-                error: error.data
-            })
-            
-            return res.status(400).json({ 
-                error: scopeMessage,
-                details: {
-                    needed: neededScopes.length > 0 ? neededScopes : defaultNeededScopes,
-                    provided: providedScopes,
-                    instructions: 'Go to https://api.slack.com/apps → Your App → OAuth & Permissions → Add Bot Token Scopes → Reinstall App'
-                }
-            })
-        }
-        
         return res.status(500).json({ error: error.message || 'Failed to sync channels from Slack' })
     }
 }

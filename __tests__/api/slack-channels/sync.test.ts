@@ -224,13 +224,14 @@ describe('/api/slack-channels/sync', () => {
       })
     })
 
-    it('should handle missing scope error', async () => {
+    it('should handle Slack API errors generically', async () => {
       const slackError = {
         data: {
           error: 'missing_scope',
           needed: ['channels:read', 'groups:read'],
           provided: ['chat:write'],
         },
+        message: 'An API error occurred: missing_scope',
       }
 
       mockSlackClient.conversations.list.mockRejectedValue(slackError)
@@ -240,66 +241,9 @@ describe('/api/slack-channels/sync', () => {
 
       await handler(req as any, res)
 
-      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.status).toHaveBeenCalledWith(500)
       expect(res.json).toHaveBeenCalledWith({
-        error: expect.stringContaining('Missing scopes'),
-        details: {
-          needed: ['channels:read', 'groups:read'],
-          provided: ['chat:write'],
-          instructions: expect.stringContaining('OAuth & Permissions'),
-        },
-      })
-    })
-
-    it('should handle missing scope error with single scope string', async () => {
-      const slackError = {
-        data: {
-          error: 'missing_scope',
-          needed: 'channels:read',
-          provided: 'chat:write',
-        },
-      }
-
-      mockSlackClient.conversations.list.mockRejectedValue(slackError)
-
-      const req = createMockRequest('POST')
-      const res = createMockResponse()
-
-      await handler(req as any, res)
-
-      expect(res.status).toHaveBeenCalledWith(400)
-      expect(res.json).toHaveBeenCalledWith({
-        error: expect.stringContaining('Missing scopes'),
-        details: {
-          needed: ['channels:read'],
-          provided: ['chat:write'],
-          instructions: expect.stringContaining('OAuth & Permissions'),
-        },
-      })
-    })
-
-    it('should handle missing scope error without scope details', async () => {
-      const slackError = {
-        data: {
-          error: 'missing_scope',
-        },
-      }
-
-      mockSlackClient.conversations.list.mockRejectedValue(slackError)
-
-      const req = createMockRequest('POST')
-      const res = createMockResponse()
-
-      await handler(req as any, res)
-
-      expect(res.status).toHaveBeenCalledWith(400)
-      expect(res.json).toHaveBeenCalledWith({
-        error: expect.stringContaining('channels:read'),
-        details: {
-          needed: ['channels:read', 'groups:read'],
-          provided: [],
-          instructions: expect.stringContaining('OAuth & Permissions'),
-        },
+        error: 'An API error occurred: missing_scope',
       })
     })
 

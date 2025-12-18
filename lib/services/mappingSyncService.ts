@@ -35,13 +35,30 @@ export async function processMapping(
     let mappingSuccess = false
     let mappingError: string | undefined = undefined
     
+    // Calculate days to fetch based on cadence
+    const cadence = mapping.cadence || 'daily'
+    let daysToFetch: number
+    switch (cadence) {
+        case 'daily':
+            daysToFetch = 1
+            break
+        case 'weekly':
+            daysToFetch = 7
+            break
+        case 'monthly':
+            daysToFetch = 30
+            break
+        default:
+            daysToFetch = 1
+    }
+    
     // Process each channel in the mapping
     for (const mappingChannel of mapping.slackChannels) {
         try {
-            // 1. Fetch Slack Messages (Last 24 hours)
+            // 1. Fetch Slack Messages (based on cadence: daily = 1 day, weekly = 7 days, monthly = 30 days)
             const history = await fetchRecentMessages(
                 mappingChannel.slackChannel.channelId,
-                1
+                daysToFetch
             )
 
             if (!history.messages || history.messages.length === 0) {
