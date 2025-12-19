@@ -146,6 +146,8 @@ model FireHookLog {
   payload           Json?     // Full webhook payload
   processed         Boolean   @default(false) // Whether the webhook has been processed
   isAuthentic       Boolean?  // Whether the webhook signature was verified
+  computedSignature String?   // HMAC SHA-256 signature computed using FIREFLIES_WEBHOOK_SECRET
+  receivedSignature String?   // Signature value from x-hub-signature header
   errorMessage      String?   // Error message if processing failed
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

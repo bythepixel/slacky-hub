@@ -120,12 +120,19 @@ export default async function handler(
         // Verify HMAC signature
         const webhookSecret = getEnv('FIREFLIES_WEBHOOK_SECRET', '')
         const receivedSignature = req.headers['x-hub-signature'] as string | undefined
+        
+        // Compute the signature for storage
+        const computedSignature = webhookSecret ? computeSignature(rawBody, webhookSecret) : null
+        
+        // Verify the signature
         const isAuthentic = verifySignature(rawBody, webhookSecret, receivedSignature)
 
         console.log('[FireSpot] Signature verification:', {
             hasSecret: !!webhookSecret,
             hasSignature: !!receivedSignature,
-            isAuthentic
+            isAuthentic,
+            computedSignature: computedSignature?.substring(0, 16) + '...',
+            receivedSignature: receivedSignature?.substring(0, 16) + '...'
         })
 
         // Verify prisma client has the model
@@ -148,6 +155,8 @@ export default async function handler(
                 payload: body,
                 processed: false,
                 isAuthentic: isAuthentic,
+                computedSignature: computedSignature,
+                receivedSignature: receivedSignature || null,
             },
         })
 

@@ -13,6 +13,8 @@ type FireHookLog = {
     payload?: any
     processed: boolean
     isAuthentic?: boolean | null
+    computedSignature?: string | null
+    receivedSignature?: string | null
     errorMessage?: string
     createdAt: string
     updatedAt: string
@@ -160,7 +162,6 @@ export default function FireHookLogs() {
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Date</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Event Type</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Meeting ID</th>
-                                            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Client Reference</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Authentic</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Processed</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider"></th>
@@ -183,11 +184,6 @@ export default function FireHookLogs() {
                                                     <td className="py-4 px-4">
                                                         <div className="text-sm text-slate-300 font-mono">
                                                             {log.meetingId || <span className="text-slate-500">N/A</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-4 px-4">
-                                                        <div className="text-sm text-slate-300 font-mono">
-                                                            {log.clientReferenceId || <span className="text-slate-500">N/A</span>}
                                                         </div>
                                                     </td>
                                                     <td className="py-4 px-4">
@@ -221,7 +217,7 @@ export default function FireHookLogs() {
                                                 </tr>
                                                 {expandedLogs.has(log.id) && (
                                                     <tr key={`${log.id}-details`}>
-                                                        <td colSpan={7} className="py-4 px-4 bg-slate-700/20">
+                                                        <td colSpan={6} className="py-4 px-4 bg-slate-700/20">
                                                             <div className="space-y-3">
                                                                 <h4 className="text-sm font-semibold text-slate-300 mb-3">Details:</h4>
                                                                 <div className="space-y-2 text-xs text-slate-400">
@@ -245,6 +241,22 @@ export default function FireHookLogs() {
                                                                             '? Unknown'
                                                                         }
                                                                     </div>
+                                                                    {log.computedSignature && (
+                                                                        <div>
+                                                                            <span className="font-semibold text-slate-300">Computed Signature:</span>
+                                                                            <div className="mt-1 font-mono text-xs break-all text-slate-300">
+                                                                                {log.computedSignature}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {log.receivedSignature && (
+                                                                        <div>
+                                                                            <span className="font-semibold text-slate-300">Received Signature:</span>
+                                                                            <div className="mt-1 font-mono text-xs break-all text-slate-300">
+                                                                                {log.receivedSignature}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
                                                                     <div>
                                                                         <span className="font-semibold text-slate-300">Processed:</span> {log.processed ? 'Yes' : 'No'}
                                                                     </div>
