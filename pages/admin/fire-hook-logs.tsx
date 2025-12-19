@@ -29,6 +29,7 @@ export default function FireHookLogs() {
     const [total, setTotal] = useState(0)
     const [limit] = useState(50)
     const [offset, setOffset] = useState(0)
+    const [processingLogs, setProcessingLogs] = useState<Set<number>>(new Set())
 
     useEffect(() => {
         if (status === "unauthenticated") {
@@ -69,6 +70,44 @@ export default function FireHookLogs() {
             newExpanded.add(logId)
         }
         setExpandedLogs(newExpanded)
+    }
+
+    const handleProcess = async (logId: number, e: React.MouseEvent) => {
+        e.stopPropagation() // Prevent row expansion
+        
+        if (processingLogs.has(logId)) {
+            return // Already processing
+        }
+
+        setProcessingLogs(prev => new Set(prev).add(logId))
+
+        try {
+            const res = await fetch(`/api/fire-hook-logs/${logId}/process`, {
+                method: 'POST',
+            })
+
+            const data = await res.json().catch(() => ({ error: 'Failed to parse response' }))
+
+            if (!res.ok) {
+                console.error('Failed to process fire hook log:', res.status, data)
+                const errorMsg = data.details 
+                    ? `${data.error}: ${typeof data.details === 'string' ? data.details : JSON.stringify(data.details)}`
+                    : data.error || 'Unknown error'
+                alert(`Failed to process log: ${errorMsg}`)
+            } else {
+                // Refresh the logs to show updated status
+                await fetchLogs()
+            }
+        } catch (error: any) {
+            console.error('Error processing fire hook log:', error)
+            alert(`Error processing log: ${error.message || 'Network error'}`)
+        } finally {
+            setProcessingLogs(prev => {
+                const newSet = new Set(prev)
+                newSet.delete(logId)
+                return newSet
+            })
+        }
     }
 
     const formatDate = (dateString: string) => {
@@ -164,6 +203,7 @@ export default function FireHookLogs() {
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Meeting ID</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Authentic</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Processed</th>
+                                            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Actions</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider"></th>
                                         </tr>
                                     </thead>
@@ -202,6 +242,27 @@ export default function FireHookLogs() {
                                                         )}
                                                     </td>
                                                     <td className="py-4 px-4">
+                                                        {!log.processed && log.meetingId && (
+                                                            <button
+                                                                onClick={(e) => handleProcess(log.id, e)}
+                                                                disabled={processingLogs.has(log.id)}
+                                                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                                                            >
+                                                                {processingLogs.has(log.id) ? (
+                                                                    <>
+                                                                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                        </svg>
+                                                                        Processing...
+                                                                    </>
+                                                                ) : (
+                                                                    'Process'
+                                                                )}
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-4 px-4">
                                                         <button className="text-slate-400 hover:text-slate-200 transition-colors">
                                                             {expandedLogs.has(log.id) ? (
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -217,7 +278,7 @@ export default function FireHookLogs() {
                                                 </tr>
                                                 {expandedLogs.has(log.id) && (
                                                     <tr key={`${log.id}-details`}>
-                                                        <td colSpan={6} className="py-4 px-4 bg-slate-700/20">
+                                                        <td colSpan={7} className="py-4 px-4 bg-slate-700/20">
                                                             <div className="space-y-3">
                                                                 <h4 className="text-sm font-semibold text-slate-300 mb-3">Details:</h4>
                                                                 <div className="space-y-2 text-xs text-slate-400">
