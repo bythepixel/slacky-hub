@@ -145,6 +145,7 @@ model FireHookLog {
   clientReferenceId String?   // Client reference ID from webhook
   payload           Json?     // Full webhook payload
   processed         Boolean   @default(false) // Whether the webhook has been processed
+  isAuthentic       Boolean?  // Whether the webhook signature was verified
   errorMessage      String?   // Error message if processing failed
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

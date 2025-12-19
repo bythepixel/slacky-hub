@@ -12,6 +12,7 @@ const REQUIRED_ENV_VARS = [
 
 const OPTIONAL_ENV_VARS = [
     'FIREFLIES_API_KEY',
+    'FIREFLIES_WEBHOOK_SECRET',
 ] as const
 
 /**

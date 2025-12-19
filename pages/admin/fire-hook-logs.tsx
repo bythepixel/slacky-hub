@@ -12,6 +12,7 @@ type FireHookLog = {
     clientReferenceId?: string
     payload?: any
     processed: boolean
+    isAuthentic?: boolean | null
     errorMessage?: string
     createdAt: string
     updatedAt: string
@@ -103,6 +104,17 @@ export default function FireHookLogs() {
         }
     }
 
+    const getAuthenticBadge = (isAuthentic: boolean | null | undefined) => {
+        const baseClasses = "px-2 py-1 rounded-full text-xs font-semibold"
+        if (isAuthentic === true) {
+            return `${baseClasses} bg-green-500/20 text-green-400`
+        } else if (isAuthentic === false) {
+            return `${baseClasses} bg-red-500/20 text-red-400`
+        } else {
+            return `${baseClasses} bg-slate-500/20 text-slate-400`
+        }
+    }
+
     if (status === "loading") {
         return <div className="min-h-screen bg-slate-900 flex items-center justify-center">Loading...</div>
     }
@@ -149,6 +161,7 @@ export default function FireHookLogs() {
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Event Type</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Meeting ID</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Client Reference</th>
+                                            <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Authentic</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Processed</th>
                                             <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider"></th>
                                         </tr>
@@ -178,6 +191,11 @@ export default function FireHookLogs() {
                                                         </div>
                                                     </td>
                                                     <td className="py-4 px-4">
+                                                        <span className={getAuthenticBadge(log.isAuthentic)}>
+                                                            {log.isAuthentic === true ? '✓ Authentic' : log.isAuthentic === false ? '✗ Inauthentic' : '? Unknown'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4 px-4">
                                                         <span className={getProcessedBadge(log.processed)}>
                                                             {log.processed ? 'Processed' : 'Pending'}
                                                         </span>
@@ -203,7 +221,7 @@ export default function FireHookLogs() {
                                                 </tr>
                                                 {expandedLogs.has(log.id) && (
                                                     <tr key={`${log.id}-details`}>
-                                                        <td colSpan={6} className="py-4 px-4 bg-slate-700/20">
+                                                        <td colSpan={7} className="py-4 px-4 bg-slate-700/20">
                                                             <div className="space-y-3">
                                                                 <h4 className="text-sm font-semibold text-slate-300 mb-3">Details:</h4>
                                                                 <div className="space-y-2 text-xs text-slate-400">
@@ -219,6 +237,13 @@ export default function FireHookLogs() {
                                                                     )}
                                                                     <div>
                                                                         <span className="font-semibold text-slate-300">Event Type:</span> {log.eventType}
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="font-semibold text-slate-300">Authentic:</span> {
+                                                                            log.isAuthentic === true ? '✓ Yes' : 
+                                                                            log.isAuthentic === false ? '✗ No' : 
+                                                                            '? Unknown'
+                                                                        }
                                                                     </div>
                                                                     <div>
                                                                         <span className="font-semibold text-slate-300">Processed:</span> {log.processed ? 'Yes' : 'No'}
